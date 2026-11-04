@@ -2,8 +2,10 @@ package com.rhaydae.controller;
 
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -27,13 +29,18 @@ import lombok.RequiredArgsConstructor;
 public class JobOfferController {
 	
 	private final JobOfferService jobOfferService;
+	
+	
 	@PostMapping("/saveJob")
-	@Operation(security = { 
-			@SecurityRequirement(name = "bearerAuth") }) 
-	public JobOfferResponse createJobOffer( @Valid @RequestBody JobOfferRequest request) { 
-		
-		return jobOfferService.createJob(request);
-		}
+	@Operation(security = {
+	        @SecurityRequirement(name = "bearerAuth")
+	})
+	public JobOfferResponse createJobOffer(
+	        @Valid @RequestBody JobOfferRequest request,
+	        Authentication authentication) {
+
+	    return jobOfferService.createJob(request, authentication.getName());
+	}
 	
 	@GetMapping("/{id}")
 	@Operation(security = { 
@@ -53,6 +60,19 @@ public class JobOfferController {
 			@SecurityRequirement(name = "bearerAuth") }) 
 	public JobOfferResponse updateJobOffer( @PathVariable Long id, @Valid @RequestBody JobOfferRequest request) {
 		return jobOfferService.updateJobOffer(id, request);
+		}
+	
+		@PatchMapping("/{id}/close")
+		@Operation(security = {
+		        @SecurityRequirement(name = "bearerAuth")
+		})
+		public JobOfferResponse closeJobOffer(
+		        @PathVariable Long id,
+		        Authentication authentication) {
+	
+		    String email = authentication.getName();
+	
+		    return jobOfferService.closeJobOffer(id, email);
 		}
 
 	@DeleteMapping("/delete/{id}") 

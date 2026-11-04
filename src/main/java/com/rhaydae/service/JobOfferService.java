@@ -8,7 +8,10 @@ import org.springframework.stereotype.Service;
 import com.rhaydae.dto.JobOfferRequest;
 import com.rhaydae.dto.JobOfferResponse;
 import com.rhaydae.entities.JobOffers;
+import com.rhaydae.entities.User;
+import com.rhaydae.enums.Role;
 import com.rhaydae.repositories.JobOffersRepository;
+import com.rhaydae.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,9 +20,25 @@ import lombok.RequiredArgsConstructor;
 public class JobOfferService {
 	
 	private final JobOffersRepository jobOffersRepository;
+	private final UserRepository userRepository;
 	
 	
-	public JobOfferResponse createJob(JobOfferRequest dto) {
+	private User getRecruiter(String email) {
+
+	    User recruiter = userRepository.findByEmail(email)
+	            .orElseThrow(() -> new RuntimeException("User not found"));
+
+	    if (recruiter.getRole() != Role.RECRUITER) {
+	        throw new RuntimeException("Only recruiters can manage job offers");
+	    }
+
+	    return recruiter;
+	}
+	
+	
+	public JobOfferResponse createJob(JobOfferRequest dto, String email) {
+		
+		User recruiter = getRecruiter(email);
 		
 		JobOffers job = JobOffers.builder()
 				.title(dto.title())
@@ -29,6 +48,7 @@ public class JobOfferService {
 				.contractType(dto.contractType())
 			    .createdAt(LocalDateTime.now())
 			    .active(true)
+			    .recruiter(recruiter)
 				.build();
 		
 		JobOffers savedJob = jobOffersRepository.save(job);
@@ -78,9 +98,31 @@ public class JobOfferService {
 		
 		JobOffers updatedOffer = jobOffersRepository.save(jobOffer);
 		
-		return mapToResponse(updatedOffer);
+			return mapToResponse(updatedOffer);
+		
 		}
 
+		public JobOfferResponse closeJobOffer(Long id, String email) {
+	
+		    User recruiter = getRecruiter(email);
+	
+		    JobOffers jobOffer = jobOffersRepository.findById(id)
+		            .orElseThrow(() -> new RuntimeException("Job offer not found"));
+	
+		    if (!jobOffer.getRecruiter().getId().equals(recruiter.getId())) {
+		        throw new RuntimeException("You cannot close another recruiter's job offer");
+		    }
+	
+		    jobOffer.setActive(false);
+	
+		    JobOffers updatedOffer = jobOffersRepository.save(jobOffer);
+	
+		    	return mapToResponse(updatedOffer);
+		}
+	
+	
+	
+	
 	public void deleteJobOffer(Long id) {
 		jobOffersRepository.deleteById(id);
 		
